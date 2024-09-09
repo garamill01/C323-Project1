@@ -19,4 +19,6 @@
     <string name="zero_button">0</string>
     <string name="decimal_button">.</string>
     <string name="equals_button">=</string>
+    <string name="calculator_strings">2</string>
+    <string name="error_message">Error</string>
 </resources>

@@ -7,6 +7,7 @@ The following **required** functionality is completed:
 * [X] User can use both whole and decimal numbers
 * [X] User can use operations on results of operation calculated prior
 * [X] User is warned with an Error if there is an attempt to divide by 0
+      
 The following **extensions** are implemented:
 * viewBinding
 * android.os.Bundle

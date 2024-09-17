@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.viewModels
 import com.example.calculator.databinding.ActivityMainBinding
 
 private const val TAG = "MainActivity"
@@ -12,12 +13,10 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
 
+    private val calculatorViewModel: CalculatorViewModel by viewModels()
+
     // Created global variables to store the two operands and operation (+, -, X, /), along with the
     // Result variable when equals is pressed
-    private var operand1: String = ""
-    private var operand2: String = ""
-    private var operation: String = ""
-    private var result: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,14 +24,17 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        Log.d(TAG, "Got a CalculatorViewModel: $calculatorViewModel")
+
         // Calculator text view is set to 0 as default
-        binding.calculatorTextView.text = "0"
+        binding.calculatorTextView.text = calculatorViewModel.currentText
 
         // Clear button calls the clear() function, which resets all the global variables to their
         // default state
         binding.clearButton.setOnClickListener {
             Log.d(TAG, "Clear Button Pressed")
-            clear()
+            calculatorViewModel.clear()
+            updateTextBox("0")
         }
 
         // Equals button makes sure there are two variables in the operands and an operation,
@@ -41,12 +43,9 @@ class MainActivity : AppCompatActivity() {
         // but not the result variable so that it can be displayed or used as an operand.
         binding.equalsButton.setOnClickListener {
             Log.d(TAG, "Equals Button Pressed")
-            if (operand1 != "" && operand2 != "" && operation != "") {
-                result = calculate(operand1, operand2, operation)
-                operand1 = ""
-                operand2 = ""
-                operation = ""
-                binding.calculatorTextView.text = result
+            val calculatorText = calculatorViewModel.calculate()
+            if (calculatorText != "") {
+                binding.calculatorTextView.text = calculatorText
             }
         }
 
@@ -55,83 +54,39 @@ class MainActivity : AppCompatActivity() {
         // If so, then the program calculates those variables and places the result in operand1
         // and the pressed operation as the new operation variable, then awaits a second operand.
         binding.addButton.setOnClickListener {
-            if (operand1 != "" && operand2 != "") {
-                operand1 = calculate(operand1, operand2, operation)
-                operand2 = ""
-                operation = "+"
-                binding.calculatorTextView.text = operand1
-            } else if (operand2 == "" && operand1 == "" && result != "") {
-                operand1 = result
-                operation = "+"
-                binding.calculatorTextView.text = operand1
-            } else if (operand1 != "" && operation == "") {
-                operation = "+"
+            val calculatorText = calculatorViewModel.operationButton("+")
+            if (calculatorText != "") {
+                updateTextBox(calculatorText)
             }
-            Log.d(TAG, "Add Button Pressed: " +
-                    "Op1 = $operand1, Op2 = $operand2, Operation = $operation")
         }
 
         binding.subtractButton.setOnClickListener {
-            if (operand1 != "" && operand2 != "") {
-                operand1 = calculate(operand1, operand2, operation)
-                operand2 = ""
-                operation = "-"
-                binding.calculatorTextView.text = operand1
-            } else if (operand2 == "" && operand1 == "" && result != "") {
-                operand1 = result
-                operation = "-"
-                binding.calculatorTextView.text = operand1
-            } else if (operand1 != "" && operation == "") {
-                operation = "-"
+            val calculatorText = calculatorViewModel.operationButton("-")
+            if (calculatorText != "") {
+                updateTextBox(calculatorText)
             }
-            Log.d(TAG, "Subtract Button Pressed: " +
-                    "Op1 = $operand1, Op2 = $operand2, Operation = $operation")
         }
 
         binding.multiplyButton.setOnClickListener {
-            if (operand1 != "" && operand2 != "") {
-                operand1 = calculate(operand1, operand2, operation)
-                operand2 = ""
-                operation = "X"
-                binding.calculatorTextView.text = operand1
-            } else if (operand2 == "" && operand1 == "" && result != "") {
-                operand1 = result
-                operation = "X"
-                binding.calculatorTextView.text = operand1
-            } else if (operand1 != "" && operation == "") {
-                operation = "X"
+            val calculatorText = calculatorViewModel.operationButton("X")
+            if (calculatorText != "") {
+                updateTextBox(calculatorText)
             }
-            Log.d(TAG, "Multiply Button Pressed: " +
-                    "Op1 = $operand1, Op2 = $operand2, Operation = $operation")
         }
 
         binding.divideButton.setOnClickListener {
-            if (operand1 != "" && operand2 != "") {
-                operand1 = calculate(operand1, operand2, operation)
-                operand2 = ""
-                operation = "/"
-                binding.calculatorTextView.text = operand1
-            } else if (operand2 == "" && operand1 == "" && result != "") {
-                operand1 = result
-                operation = "/"
-                binding.calculatorTextView.text = operand1
-            } else if (operand1 != "" && operation == "") {
-                operation = "/"
+            val calculatorText = calculatorViewModel.operationButton("/")
+            if (calculatorText != "") {
+                updateTextBox(calculatorText)
             }
-            Log.d(TAG, "Divide Button Pressed: " +
-                    "Op1 = $operand1, Op2 = $operand2, Operation = $operation")
         }
 
         // The decimal button first checks which operand is being appended to, then makes sure that
         // the operand does not already contain a decimal
         binding.decimalButton.setOnClickListener {
-            if (operand1 != "" && operation != "" && !operand2.contains(".")) {
-                operand2 += "."
-                binding.calculatorTextView.text = operand2
-            }
-            else if (!operand1.contains(".")){
-                operand1 += "."
-                binding.calculatorTextView.text = operand1
+            val result = calculatorViewModel.decimalButton()
+            if (result != "") {
+                updateTextBox(result)
             }
             Log.d(TAG, "Decimal Button Pressed")
         }
@@ -139,208 +94,124 @@ class MainActivity : AppCompatActivity() {
         // The plus/minus button uses logic to check which operand is being appended, then checks
         // whether to add the minus sign or remove it.
         binding.plusMinusButton.setOnClickListener {
-            if (operand1 != "" && operation == "") {
-                operand1 = if (operand1.substring(0, 1) == "-") {
-                    operand1.substring(1)
-                } else {
-                    "-$operand1"
-                }
-                binding.calculatorTextView.text = operand1
-            } else if (operand2 != ""){
-                operand2 = if (operand2.substring(0, 1) == "-") {
-                    operand2.substring(1)
-                } else {
-                    "-$operand2"
-                }
-                binding.calculatorTextView.text = operand2
+            val result = calculatorViewModel.plusMinusButton()
+            if (result != "") {
+                updateTextBox(result)
             }
             Log.d(TAG, "Plus/Minus Button Pressed")
         }
 
         binding.percentButton.setOnClickListener {
-            if (operand1 != "" && operand2 != "") {
-                operand2 = (operand2.toDouble() / 100).toString()
-                binding.calculatorTextView.text = operand2
-            } else if (operand2 == "" && operand1 == "" && result != "") {
-                operand1 = result
-                result = ""
-                operand1 = (operand1.toDouble() / 100).toString()
-                binding.calculatorTextView.text = operand1
-            } else if (operand1 != "" && operation == "") {
-                operand1 = (operand1.toDouble() / 100).toString()
-                binding.calculatorTextView.text = operand1
+            val result = calculatorViewModel.percentButton()
+            if (result != "") {
+                updateTextBox(result)
             }
-            Log.d(TAG, "Percent Button Pressed: " +
-                    "Op1 = $operand1, Op2 = $operand2, Operation = $operation")
+            Log.d(TAG, "Percent Button Pressed")
+        }
+
+        // All of the trigonometric buttons (sin, cos, tan) and the logarithmic buttons (log10, ln)
+        // use the same function logic as the percent button, where the function checks to see the
+        // values of the operand and operation variables to determine what number to apply the
+        // button's function to. Then the affected value is passed along back to the binding
+        // statement to where the textbox is updated, unless the button had no value to apply to.
+        binding.sinButton?.setOnClickListener {
+            val result = calculatorViewModel.sinButton()
+            if (result != "") {
+                updateTextBox(result)
+            }
+            Log.d(TAG, "Sin Button Pressed")
+        }
+
+        binding.cosButton?.setOnClickListener {
+            val result = calculatorViewModel.cosButton()
+            if (result != "") {
+                updateTextBox(result)
+            }
+            Log.d(TAG, "Cos Button Pressed")
+        }
+
+        binding.tanButton?.setOnClickListener {
+            val result = calculatorViewModel.tanButton()
+            if (result != "") {
+                updateTextBox(result)
+            }
+            Log.d(TAG, "Tan Button Pressed")
+        }
+
+        binding.log10Button?.setOnClickListener {
+            val result = calculatorViewModel.log10Button()
+            if (result != "") {
+                updateTextBox(result)
+            }
+            Log.d(TAG, "Log10 Button Pressed")
+        }
+
+        binding.lnButton?.setOnClickListener {
+            val result = calculatorViewModel.lnButton()
+            if (result != "") {
+                updateTextBox(result)
+            }
+            Log.d(TAG, "ln Button Pressed")
         }
 
         // Each number button uses logic to check which operand is currently being appended based on
         // if the operation variable contains a value or is an empty string
         binding.oneButton.setOnClickListener {
-            if (operand1 != "" && operation != "") {
-                operand2 += "1"
-                binding.calculatorTextView.text = operand2
-            }
-            else {
-                operand1 += "1"
-                binding.calculatorTextView.text = operand1
-            }
+            updateTextBox(calculatorViewModel.numberButton("1"))
             Log.d(TAG, "One Button Pressed")
         }
 
         binding.twoButton.setOnClickListener {
-            if (operand1 != "" && operation != "") {
-                operand2 += "2"
-                binding.calculatorTextView.text = operand2
-            }
-            else {
-                operand1 += "2"
-                binding.calculatorTextView.text = operand1
-            }
+            updateTextBox(calculatorViewModel.numberButton("2"))
             Log.d(TAG, "Two Button Pressed")
         }
 
         binding.threeButton.setOnClickListener {
-            if (operand1 != "" && operation != "") {
-                operand2 += "3"
-                binding.calculatorTextView.text = operand2
-            }
-            else {
-                operand1 += "3"
-                binding.calculatorTextView.text = operand1
-            }
+            updateTextBox(calculatorViewModel.numberButton("3"))
             Log.d(TAG, "Three Button Pressed")
         }
 
         binding.fourButton.setOnClickListener {
-            if (operand1 != "" && operation != "") {
-                operand2 += "4"
-                binding.calculatorTextView.text = operand2
-            }
-            else {
-                operand1 += "4"
-                binding.calculatorTextView.text = operand1
-            }
+            updateTextBox(calculatorViewModel.numberButton("4"))
             Log.d(TAG, "Four Button Pressed")
         }
 
         binding.fiveButton.setOnClickListener {
-            if (operand1 != "" && operation != "") {
-                operand2 += "5"
-                binding.calculatorTextView.text = operand2
-            }
-            else {
-                operand1 += "5"
-                binding.calculatorTextView.text = operand1
-            }
+            updateTextBox(calculatorViewModel.numberButton("5"))
             Log.d(TAG, "Five Button Pressed")
         }
 
         binding.sixButton.setOnClickListener {
-            if (operand1 != "" && operation != "") {
-                operand2 += "6"
-                binding.calculatorTextView.text = operand2
-            }
-            else {
-                operand1 += "6"
-                binding.calculatorTextView.text = operand1
-            }
+            updateTextBox(calculatorViewModel.numberButton("6"))
             Log.d(TAG, "Six Button Pressed")
         }
 
         binding.sevenButton.setOnClickListener {
-            if (operand1 != "" && operation != "") {
-                operand2 += "7"
-                binding.calculatorTextView.text = operand2
-            }
-            else {
-                operand1 += "7"
-                binding.calculatorTextView.text = operand1
-            }
+            updateTextBox(calculatorViewModel.numberButton("7"))
             Log.d(TAG, "Seven Button Pressed")
         }
 
         binding.eightButton.setOnClickListener {
-            if (operand1 != "" && operation != "") {
-                operand2 += "8"
-                binding.calculatorTextView.text = operand2
-            }
-            else {
-                operand1 += "8"
-                binding.calculatorTextView.text = operand1
-            }
+            updateTextBox(calculatorViewModel.numberButton("8"))
             Log.d(TAG, "Eight Button Pressed")
         }
 
         binding.nineButton.setOnClickListener {
-            if (operand1 != "" && operation != "") {
-                operand2 += "9"
-                binding.calculatorTextView.text = operand2
-            }
-            else {
-                operand1 += "9"
-                binding.calculatorTextView.text = operand1
-            }
+            updateTextBox(calculatorViewModel.numberButton("9"))
             Log.d(TAG, "Nine Button Pressed")
         }
 
         binding.zeroButton.setOnClickListener {
-            if (operand1 != "" && operation != "") {
-                operand2 += "0"
-                binding.calculatorTextView.text = operand2
-            }
-            else {
-                operand1 += "0"
-                binding.calculatorTextView.text = operand1
-            }
+            updateTextBox(calculatorViewModel.numberButton("0"))
             Log.d(TAG, "Zero Button Pressed")
         }
     }
 
-    // The clear function returns the four global variables to their original state, along with the
-    // text view back to only show its default state of "0"
-    private fun clear() {
-        operand1 = ""
-        operand2 = ""
-        operation = ""
-        result = ""
-
-        binding.calculatorTextView.text = "0"
-    }
-
-    // Calculate is called when either the equals button is pressed, or an operation is pressed when
-    // there are already two operands and an operation are stored in the corresponding variables.
-    private fun calculate(operand1: String, operand2: String, operation: String): String {
-        var resultDouble = 0.0
-        var result = 0
-
-        // The function makes sure that the program does not try to divide by zero and will display
-        // "Error" if this is attempted.
-        if (operation == "/" && operand2 == "0") {
-            clear()
-            return "Error"
-        }
-
-        // This portion of the function checks whether either operand contains a decimal, deciding
-        // whether the var types should be Double or Int
-        if (operand1.contains(".") || operand2.contains(".")) {
-            when (operation) {
-                "+" -> resultDouble = operand1.toDouble() + operand2.toDouble()
-                "-" -> resultDouble = operand1.toDouble() - operand2.toDouble()
-                "X" -> resultDouble = operand1.toDouble() * operand2.toDouble()
-                "/" -> resultDouble = operand1.toDouble() / operand2.toDouble()
-            }
-            Log.d(TAG, "Calculate function: Op1 = $operand1, Op2 = $operand2, Operand = $operation, result = $resultDouble")
-            return resultDouble.toString()
-        } else {
-            when (operation) {
-                "+" -> result = operand1.toInt() + operand2.toInt()
-                "-" -> result = operand1.toInt() - operand2.toInt()
-                "X" -> result = operand1.toInt() * operand2.toInt()
-                "/" -> result = operand1.toInt() / operand2.toInt()
-            }
-            Log.d(TAG, "Calculate function: Op1 = $operand1, Op2 = $operand2, Operand = $operation, result = $result")
-            return result.toString()
-        }
+    private fun updateTextBox(text: String) {
+        calculatorViewModel.currentText = text
+        binding.calculatorTextView.text = text
     }
 }
+
+
+

@@ -21,4 +21,9 @@
     <string name="equals_button">=</string>
     <string name="calculator_strings">2</string>
     <string name="error_message">Error</string>
+    <string name="sin_button">sin</string>
+    <string name="cos_button">cos</string>
+    <string name="tan_button">tan</string>
+    <string name="log10_button">Log 10</string>
+    <string name="ln_button">ln</string>
 </resources>

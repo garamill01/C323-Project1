@@ -13,10 +13,10 @@ private const val TAG = "CalculatorViewModel"
 
 class CalculatorViewModel(private val savedStateHandle: SavedStateHandle) : ViewModel() {
 
-    private var operand1: String = ""
-    private var operand2: String = ""
-    private var operation: String = ""
-    private var result: String = ""
+    var operand1: String = ""
+    var operand2: String = ""
+    var operation: String = ""
+    var result: String = ""
     var currentText: String = "0"
 
     // The clear function returns the four global variables to their original state, along with the
@@ -44,35 +44,29 @@ class CalculatorViewModel(private val savedStateHandle: SavedStateHandle) : View
             return ""
         }
 
-        // This portion of the function checks whether either operand contains a decimal, deciding
-        // whether the var types should be Double or Int
-        if (operand1.contains(".") || operand2.contains(".")) {
-            when (operation) {
-                "+" -> resultDouble = operand1.toDouble() + operand2.toDouble()
-                "-" -> resultDouble = operand1.toDouble() - operand2.toDouble()
-                "X" -> resultDouble = operand1.toDouble() * operand2.toDouble()
-                "/" -> resultDouble = operand1.toDouble() / operand2.toDouble()
-            }
-            Log.d(TAG, "Calculate function: Op1 = $operand1, Op2 = $operand2, Operand = $operation, result = $resultDouble")
-            operand1 = ""
-            operand2 = ""
-            operation = ""
-            result = resultDouble.toString()
-            return result
-        } else {
-            when (operation) {
-                "+" -> resultInt = operand1.toInt() + operand2.toInt()
-                "-" -> resultInt = operand1.toInt() - operand2.toInt()
-                "X" -> resultInt = operand1.toInt() * operand2.toInt()
-                "/" -> resultInt = operand1.toInt() / operand2.toInt()
-            }
-            Log.d(TAG, "Calculate function: Op1 = $operand1, Op2 = $operand2, Operand = $operation, result = $result")
-            operand1 = ""
-            operand2 = ""
-            operation = ""
-            result = resultInt.toString()
-            return result
+        // This portion of the function applies the operation to the operands and outputs the
+        // resulting value
+        when (operation) {
+            "+" -> resultDouble = operand1.toDouble() + operand2.toDouble()
+            "-" -> resultDouble = operand1.toDouble() - operand2.toDouble()
+            "X" -> resultDouble = operand1.toDouble() * operand2.toDouble()
+            "/" -> resultDouble = operand1.toDouble() / operand2.toDouble()
         }
+        Log.d(TAG, "Calculate function: Op1 = $operand1, Op2 = $operand2, Operand = $operation, result = $resultDouble")
+        operand1 = ""
+        operand2 = ""
+        operation = ""
+        result = resultDouble.toString()
+        if (result.contains(".")) {
+            if (result.substring(result.length - 2) == ".0") {
+                result = result.substring(0, result.length - 2)
+            }
+        }
+        if (result.contains(".") && result.length > 16) {
+            result = result.substring(0, 17)
+        }
+
+        return result
     }
 
     fun operationButton(op: String) : String {
@@ -96,26 +90,43 @@ class CalculatorViewModel(private val savedStateHandle: SavedStateHandle) : View
 
     fun numberButton(num: String) : String {
         if (operand1 != "" && operation != "") {
-            operand2 += num
+            if (operand2.length < 16) {
+                operand2 += num
+            }
             return operand2
         }
-        else {
+        else if (operand1.length < 16){
             operand1 += num
-            return operand1
         }
+        return operand1
     }
 
     fun percentButton() : String {
         if (operand1 != "" && operand2 != "") {
             operand2 = (operand2.toDouble() / 100).toString()
+            if (operand2.contains(".")) {
+                if (operand2.substring(operand2.length - 2) == ".0") {
+                    operand2 = operand2.substring(0, operand2.length - 2)
+                }
+            }
             return operand2
         } else if (operand2 == "" && operand1 == "" && result != "") {
             operand1 = result
             result = ""
             operand1 = (operand1.toDouble() / 100).toString()
+            if (operand1.contains(".")) {
+                if (operand1.substring(operand1.length - 2) == ".0") {
+                    operand1 = operand1.substring(0, operand1.length - 2)
+                }
+            }
             return operand1
         } else if (operand1 != "" && operation == "") {
             operand1 = (operand1.toDouble() / 100).toString()
+            if (operand1.contains(".")) {
+                if (operand1.substring(operand1.length - 2) == ".0") {
+                    operand1 = operand1.substring(0, operand1.length - 2)
+                }
+            }
             return operand1
         } else {
             return ""
@@ -124,6 +135,9 @@ class CalculatorViewModel(private val savedStateHandle: SavedStateHandle) : View
 
     fun plusMinusButton() : String {
         if (operand1 != "" && operation == "") {
+            if (operand1 == "0") {
+                return operand1
+            }
             operand1 = if (operand1.substring(0, 1) == "-") {
                 operand1.substring(1)
             } else {
@@ -131,6 +145,9 @@ class CalculatorViewModel(private val savedStateHandle: SavedStateHandle) : View
             }
             return operand1
         } else if (operand2 != ""){
+            if (operand2 == "0") {
+                return operand2
+            }
             operand2 = if (operand2.substring(0, 1) == "-") {
                 operand2.substring(1)
             } else {
